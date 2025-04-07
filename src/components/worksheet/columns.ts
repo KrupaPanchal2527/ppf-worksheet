@@ -17,8 +17,17 @@ export const columnDefs: ColDef<IWorkSheetRow>[] = [
     headerName: "Start Balance",
     field: "startBalance",
     type: "rightAligned",
+    valueGetter: (params) => {
+      const currentRowIndex = params?.node?.rowIndex;
+
+      if (currentRowIndex === 0 || !currentRowIndex)
+        return params?.data?.startBalance;
+
+      const previousRow = params.api.getRowNode(`${currentRowIndex - 1}`);
+      return previousRow?.data?.endBalanceWithInterest;
+    },
     valueFormatter: (params) => {
-      if (params.node?.isRowPinned()) return "";
+      if (params.node?.rowPinned === "bottom") return "";
       return currencyFormatter(params.value);
     },
   },
@@ -26,18 +35,32 @@ export const columnDefs: ColDef<IWorkSheetRow>[] = [
     headerName: "Investment",
     field: "investment",
     type: "rightAligned",
+    editable: true,
     valueFormatter: (params) => currencyFormatter(params.value),
+    valueSetter: (params) => {
+      // recalculate values dependant on investment value
+
+      params.data.investment = params.newValue;
+      params.data.endBalance = params.data.startBalance + params.newValue;
+      params.data.earnedInterest = calculateInterest(
+        params.data.endBalance || 0,
+        params.data.interestRate
+      );
+      params.data.endBalanceWithInterest =
+        calculateInterest(
+          params.data.endBalance || 0,
+          params.data.interestRate
+        ) + (params.data.endBalance || 0);
+
+      return true;
+    },
   },
   {
     headerName: "End Balance",
     field: "endBalance",
     type: "rightAligned",
-    valueGetter: (params) => {
-      if (params.node?.isRowPinned()) return params?.data?.endBalance;
-      return (params.data?.startBalance || 0) + (params?.data?.investment || 0);
-    },
     valueFormatter: (params) => {
-      if (params.node?.isRowPinned()) return "";
+      if (params.node?.rowPinned === "bottom") return "";
       return currencyFormatter(params.value);
     },
   },
@@ -45,9 +68,29 @@ export const columnDefs: ColDef<IWorkSheetRow>[] = [
     headerName: "Interest Rate",
     field: "interestRate",
     type: "rightAligned",
+    editable: true,
+    enableCellChangeFlash: true,
+    cellStyle: (params) => {
+      console.log(params)
+      return null;
+    },
     valueFormatter: (params) => {
-      if (params.node?.isRowPinned()) return "";
+      if (params.node?.rowPinned === "bottom") return "";
       return `${params.value}%`;
+    },
+    valueSetter: (params) => {
+      // recalculate values dependant on interestRate
+      params.data.interestRate = params.newValue;
+      params.data.earnedInterest = calculateInterest(
+        params.data.endBalance || 0,
+        params.data.interestRate
+      );
+      params.data.endBalanceWithInterest =
+        calculateInterest(
+          params.data.endBalance || 0,
+          params.data.interestRate
+        ) + (params.data.endBalance || 0);
+      return true;
     },
   },
   {
@@ -55,31 +98,14 @@ export const columnDefs: ColDef<IWorkSheetRow>[] = [
     field: "earnedInterest",
     type: "rightAligned",
     valueFormatter: (params) => currencyFormatter(params.value),
-    valueGetter: (params) => {
-      if (params.node?.isRowPinned()) return params.data?.earnedInterest;
-      return calculateInterest(
-        params.getValue("endBalance") || 0,
-        params?.data?.interestRate || 0
-      );
-    },
   },
   {
     headerName: "End Balance (with interest)",
     field: "endBalanceWithInterest",
     type: "rightAligned",
     valueFormatter: (params) => {
-      if (params.node?.isRowPinned()) return "";
+      if (params.node?.rowPinned === "bottom") return "";
       return currencyFormatter(params.value);
-    },
-    valueGetter: (params) => {
-      if (params.node?.isRowPinned())
-        return params.data?.endBalanceWithInterest;
-      return (
-        calculateInterest(
-          params.getValue("endBalance") || 0,
-          params?.data?.interestRate || 0
-        ) + params.getValue("endBalance")
-      );
     },
   },
 ];

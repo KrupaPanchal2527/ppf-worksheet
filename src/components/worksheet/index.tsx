@@ -6,13 +6,14 @@ import { columnDefs } from "./columns";
 import { generateBaseWorksheet } from "@/utils";
 import { IWorkSheetRow } from "@/types/WorkSheetRow";
 import {
+  CellValueChangedEvent,
   RowClassParams,
   RowDataUpdatedEvent,
   RowStyle,
   themeQuartz,
 } from "ag-grid-community";
 
-const myTheme = themeQuartz.withParams({
+const theme = themeQuartz.withParams({
   columnBorder: { style: "solid" },
   headerColumnBorder: { style: "solid" },
 });
@@ -21,8 +22,11 @@ export default function Worksheet() {
   const [worksheetData] = React.useState(() =>
     generateBaseWorksheet(new Date().getFullYear())
   );
+  const ref = React.useRef<AgGridReact>(null);
 
-  const onRowDataUpdated = (event: RowDataUpdatedEvent<IWorkSheetRow>) => {
+  const onRowDataUpdated = (
+    event: RowDataUpdatedEvent<IWorkSheetRow> | CellValueChangedEvent
+  ) => {
     // Calculate pinned row data
     const footerRow = {
       earnedInterest: 0,
@@ -49,7 +53,8 @@ export default function Worksheet() {
   return (
     <div>
       <AgGridReact
-        defaultColDef={{ sortable: false, resizable: false }}
+        ref={ref}
+        defaultColDef={{ sortable: false, resizable: true }}
         gridOptions={{
           domLayout: "autoHeight",
           pinnedBottomRowData: [{ earnedInterest: 0, investment: 0 }],
@@ -58,7 +63,12 @@ export default function Worksheet() {
         columnDefs={columnDefs}
         onRowDataUpdated={onRowDataUpdated}
         getRowStyle={getRowStyle}
-        theme={myTheme}
+        theme={theme}
+        onGridReady={(event) => event.api.sizeColumnsToFit()}
+        onCellValueChanged={(params) => {
+          params.api.refreshCells();
+          onRowDataUpdated(params);
+        }}
       />
     </div>
   );
