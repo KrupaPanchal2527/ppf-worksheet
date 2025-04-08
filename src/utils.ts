@@ -33,3 +33,28 @@ export const generateBaseWorksheet = (startYear: number) => {
 
   return yearlyReturns;
 };
+
+export const correctWorksheet = (currWorksheet: IWorkSheetRow[]) => {
+  const updatedWorksheet: IWorkSheetRow[] = [];
+
+  let startBalance = currWorksheet[0].startBalance || 0;
+  for (let i = 0; i < currWorksheet.length; i++) {
+    const currRow = currWorksheet[i];
+    const endBalance = startBalance + currRow.investment;
+    const earnedInterest = calculateInterest(endBalance, currRow.interestRate);
+    const endBalanceWithInterest = earnedInterest + endBalance;
+
+    const currentYearReturn: IWorkSheetRow = {
+      ...currRow,
+      startBalance,
+      endBalance,
+      earnedInterest,
+      endBalanceWithInterest,
+    };
+
+    updatedWorksheet.push(currentYearReturn);
+    startBalance = endBalanceWithInterest;
+  }
+
+  return updatedWorksheet;
+};

@@ -3,7 +3,7 @@
 import React from "react";
 import { AgGridReact } from "ag-grid-react";
 import { columnDefs } from "./columns";
-import { generateBaseWorksheet } from "@/utils";
+import { correctWorksheet, generateBaseWorksheet } from "@/utils";
 import { IWorkSheetRow } from "@/types/WorkSheetRow";
 import {
   CellValueChangedEvent,
@@ -66,8 +66,10 @@ export default function Worksheet() {
         theme={theme}
         onGridReady={(event) => event.api.sizeColumnsToFit()}
         onCellValueChanged={(params) => {
-          params.api.refreshCells();
-          onRowDataUpdated(params);
+          if (params.rowIndex && params.colDef.field) {
+            worksheetData[params.rowIndex][params.colDef.field as keyof IWorkSheetRow] = params.newValue;
+          }
+          params.api.setGridOption("rowData", correctWorksheet(worksheetData));
         }}
       />
     </div>
